@@ -1,0 +1,408 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+<additional_info>
+
+</additional_info>
+
+</file_summary>
+
+<directory_structure>
+components/
+  activity-log-table.tsx
+  searchbar.tsx
+hooks/
+  use-activity-logs.ts
+index.tsx
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="components/activity-log-table.tsx">
+import { useEffect, useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ArrowUpDown } from "lucide-react";
+import { BoxMovementView } from "@/types/activity-log";
+import { format, set } from "date-fns";
+import { useNavigate } from "react-router-dom";
+
+type SortKeyOption = "moved_by_email" | "box_name" | "moved_at" | null;
+
+interface ActivityLogTableProps {
+  filteredData: BoxMovementView[];
+  isLoading: boolean;
+}
+
+const ActivityLogTable = ({
+  filteredData,
+  isLoading,
+}: ActivityLogTableProps) => {
+  const navigate = useNavigate();
+  const [sortKey, setSortKey] = useState<SortKeyOption>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  // Sorting method for the toggle, sorts descending or asceding. 
+  useEffect(() => {
+
+    if (!sortKey) {
+      setSortKey("box_name");
+    }
+    
+    filteredData.sort((a, b) => {
+      let result = 0;
+
+      switch (sortKey) {
+        case "moved_by_email":
+          result = a.moved_by_email!.localeCompare(b.moved_by_email!);
+          break;
+        case "box_name":
+          result = a.box_name!.localeCompare(b.box_name!);
+          break;
+        case "moved_at":
+          result = a.moved_at!.localeCompare(b.moved_at!);
+          break;
+        default: 
+          console.error("Invalid sort key");
+          return 0;
+      }
+      return sortOrder === "asc" ? result : -result;
+    });
+    console.log(filteredData);
+  }, [sortKey, sortOrder]);
+
+  if (isLoading) {
+    return <p className="text-center p-4">Loading...</p>;
+  }
+
+// ----------------------------- Table Header -----------------------------------------
+
+  return (
+    <div>
+      <Table className="border-collapse w-full">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="font-bold cursor-pointer">
+              User <ArrowUpDown 
+              className="inline"
+              onClick={() => {
+                setSortKey("moved_by_email");
+                console.log("sortKey", sortKey);
+                (sortOrder === "asc" ? setSortOrder("desc") : setSortOrder("asc"));
+                console.log("sortOrder", sortOrder);
+              }}
+              />
+            </TableHead>
+
+            <TableHead
+              className="font-bold cursor-pointer"
+            >
+            Action 
+            </TableHead>
+
+            <TableHead
+              className="font-bold cursor-pointer"
+            >
+            Note 
+            </TableHead>
+
+
+            <TableHead className="font-bold cursor-pointer">
+              Box 
+              <ArrowUpDown 
+                className="inline" 
+                onClick={() => {
+                  setSortKey("box_name");
+                  console.log("sortKey", sortKey);
+                  (sortOrder === "asc" ? setSortOrder("desc") : setSortOrder("asc"));
+                  console.log("sortOrder", sortOrder);              }}/>
+            </TableHead>
+
+            <TableHead className="font-bold cursor-pointer">
+              Time 
+              <ArrowUpDown className="inline" onClick={() => {
+                  setSortKey("moved_at");
+                  (sortOrder === "asc" ? setSortOrder("desc") : setSortOrder("asc"));
+              }}/>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody> 
+          {filteredData.length > 0 ? (
+            filteredData.map((entry, index) => (
+              <TableRow key={index} className="border">
+                <TableCell className="text-blue-500">
+                  <span
+                    onClick={() => {
+                      navigate(`/admin/users/${entry.moved_by_user_id}`);
+                    }}
+                    className="hover:underline cursor-pointer"
+                  >
+                    {entry.moved_by_email}
+                  </span>
+                </TableCell>
+                <TableCell>{entry.action}</TableCell>
+                <TableCell>{entry.note}</TableCell>
+                <TableCell className="text-blue-500 underline">
+                <span
+                  onClick={() => {
+                    // TODO: Navigate to box popup
+                    navigate(`/admin/inventory`);
+                  }}
+                  className="hover:underline cursor-pointer">
+                  {entry.box_name}
+                </span>
+                </TableCell>
+                <TableCell>
+                  {entry.moved_at
+                    ? format(new Date(entry.moved_at), "MMM dd, yyyy, hh:mm a")
+                    : "N/A"}
+                </TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={4} className="text-center py-4">
+                No results found.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+};
+
+export default ActivityLogTable;
+</file>
+
+<file path="components/searchbar.tsx">
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+
+type ActionTypes = "allActions" | "Donated" | "Moved" | "Retired";
+
+interface SearchBarProps {
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
+  setStartDate: (value: Date) => void;
+  setEndDate: (value: Date) => void;
+  setAction: (value: ActionTypes) => void;
+}
+
+const SearchBar: React.FC<SearchBarProps> = ({
+  searchTerm,
+  onSearchChange,
+  setStartDate,
+  setEndDate,
+  setAction,
+}) => {
+  return (
+    <>
+      {/* Search Input */}
+      <div className="flex flex-row gap-2">
+        <div className="relative">
+          <Search className="absolute right-2 top-2.5 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by box name..."
+            value={searchTerm}
+            className="rounded-md pl-2 w-72 h-[40px]"
+            onChange={(e) => {
+              onSearchChange(e.target.value);
+              console.log("Search term changed:", e.target.value);
+            }}
+          />
+        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              className="rounded-md h-[40px] w-60 py-2 px-4 border border-neutral-200 bg-transparent text-sm"
+            >
+              All actions
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={() => setAction("allActions")}>
+              All actions (default)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setAction("Donated")}>
+              Donated
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setAction("Moved")}>
+              Moved
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setAction("Retired")}>
+              Retired
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Date Range Filter */}
+      <LocalizationProvider dateAdapter={AdapterDayjs}>
+        <div className="flex flex-row space-x-2">
+          <DatePicker
+            label="Start Date"
+            onChange={(newDate) => {
+              if (newDate) {
+                setStartDate(newDate.toDate());
+              }
+            }}
+          />
+          <DatePicker
+            label="End Date"
+            onChange={(newDate) => {
+              if (newDate) {
+                setEndDate(newDate.add(1, "day").toDate());
+              }
+            }}
+          />
+        </div>
+      </LocalizationProvider>
+    </>
+  );
+};
+
+export default SearchBar;
+</file>
+
+<file path="hooks/use-activity-logs.ts">
+import { activityLogApi } from "@/lib/api/activity-log"
+import { useQuery } from "@tanstack/react-query"
+
+export const useActivityLogs = () => {
+    return useQuery({
+      queryKey: ['activity-logs'],
+      queryFn: activityLogApi.getActivityLogs
+    })
+  }
+</file>
+
+<file path="index.tsx">
+import { useState } from "react";
+import SearchBar from "./components/searchbar.tsx";
+import ActivityLogTable from "./components/activity-log-table.tsx";
+import { useQuery } from "@tanstack/react-query";
+import { activityLogApi } from "@/lib/api/activity-log.ts";
+import { queryKeys } from "@/lib/api/queryKeys.ts";
+import { BoxMovementView } from "@/types/activity-log.ts";
+
+
+const defaultStartDate = new Date("2000-01-01");
+const defaultEndDate = new Date("2100-12-31");
+type ActionTypes = "allActions" | "Donated" | "Moved" | "Retired";
+
+
+const ActivityLog = () => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [startDate, setStartDate] = useState<Date>(defaultStartDate);
+  const [endDate, setEndDate] = useState<Date>(defaultEndDate);
+  const [action, setAction] = useState<ActionTypes>("allActions");
+
+  // Get data entries
+  const { data: activityLogs, isLoading } = useQuery({
+    queryFn: activityLogApi.getActivityLogs,
+    queryKey: queryKeys.activityLog.all,
+  });
+
+  if (isLoading) {
+    return <span></span>;
+  }
+
+  // Filter for search box filters
+  const filteredLogs = activityLogs?.filter((log) => {
+    var isInDate = true
+    var isCorrectAction = true
+    var isCorrectName = log.box_name?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    if (action != "allActions" && action != log.action) {
+      isCorrectAction = false;
+    }
+
+    if(startDate > new Date(log.moved_at!)) {
+      isInDate = false;
+    }
+
+    if(endDate < new Date(log.moved_at!)) {
+      isInDate = false;
+    }
+    
+    return isInDate && isCorrectAction && isCorrectName;
+  });
+
+
+  console.log(filteredLogs as BoxMovementView[]);
+  return (
+    <>
+      <div className="p-6 gap-y-2">
+        <h1 className="text-gray-900 font-poppins text-[24px] font-semibold leading-normal tracking-[-0.144px]">
+          Activity Log
+        </h1>
+        <div className="flex flex-row justify-between gap-x-5">
+          <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} 
+          setStartDate={setStartDate} setEndDate={setEndDate} setAction={setAction}/>
+        </div>
+        <ActivityLogTable filteredData={filteredLogs!} isLoading={isLoading} />
+      </div>
+    </>
+  );
+};
+
+export default ActivityLog;
+</file>
+
+</files>
